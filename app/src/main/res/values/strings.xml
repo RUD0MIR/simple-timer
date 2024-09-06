@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">TIMER</string>
+
+    <string name="timer_notification_title">Timer remaining:</string>
+</resources>
