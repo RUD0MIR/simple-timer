@@ -8,11 +8,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class TimerViewModel(private val repo: TimerWorkerRepository) : ViewModel() {
+class TimerViewModel(
+    private val repo: TimerWorkerRepository
+) : ViewModel() {
 
     private val _timerValue = MutableStateFlow(0f)
     val timerValue = _timerValue.asStateFlow()
-
 
     fun startStopTimer(initialValue: Float) {
         if (_timerValue.value == 0f) {
@@ -27,6 +28,13 @@ class TimerViewModel(private val repo: TimerWorkerRepository) : ViewModel() {
                     _timerValue.value = it
                 }
             }
+        }
+    }
+
+    fun resetTimer() {
+        viewModelScope.launch {
+            repo.resetTimer()
+            _timerValue.value = 0f
         }
     }
 }

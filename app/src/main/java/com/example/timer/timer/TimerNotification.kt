@@ -1,19 +1,19 @@
 package com.example.timer.timer
 
 import android.annotation.SuppressLint
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
-import androidx.annotation.IdRes
-import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.NotificationCompat.Builder
 import com.example.timer.R
+import com.example.timer.decomposeTime
 import com.example.timer.roundToString
 
-class TimerNotification(private val initialTimerValue: Float, private val context: Context) {
+class TimerNotification(private val context: Context): TimerNotificationRepository {
     private val id = 1
 
     private val defaultTitleId = R.string.timer_notification_title
@@ -22,25 +22,29 @@ class TimerNotification(private val initialTimerValue: Float, private val contex
     private val channelDescription = "Shows notification with countdown timer"
 
     @SuppressLint("MissingPermission")
-    fun update(timerValue: Float) {
+    override fun update(timerValue: Float) {
         NotificationManagerCompat
             .from(context)
             .notify(id, buildNotification(timerValue))
     }
 
-    fun hide() {
+    override fun hide() {
         NotificationManagerCompat
             .from(context)
             .cancel(id)
     }
 
-    private fun buildNotification(timerValue: Float) =
-        Builder(context, channelId)
+    private fun buildNotification(timerValue: Float): Notification {
+        val (h, min, s) = timerValue.decomposeTime()
+
+        return Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_timer_24)
             .setContentTitle(context.getString(defaultTitleId))
-            .setContentText(timerValue.roundToString())
+            .setContentText(("$h:$min:$s"))
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
+    }
+
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

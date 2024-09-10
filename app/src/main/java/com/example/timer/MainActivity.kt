@@ -16,6 +16,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import com.example.timer.permission.PermissionDialog
 import com.example.timer.permission.PostNotificationPermission
+import com.example.timer.timer.TimerNotification
+import com.example.timer.timer.TimerNotificationRepository
 import com.example.timer.timer.TimerScreen
 import com.example.timer.timer.TimerViewModel
 import com.example.timer.worker.TimerWorkerRepoImpl
@@ -40,8 +42,9 @@ class MainActivity : ComponentActivity() {
             ShowPermissionsDialog()
             TimerScreen(
                 Modifier.fillMaxSize(),
-                timerVm.timerValue.collectAsState().value.roundToString(),
-                onStartTimer = timerVm::startStopTimer
+                timerVm.timerValue.collectAsState().value,
+                onStartTimer = timerVm::startStopTimer,
+                onResetTimer = timerVm::resetTimer
             )
         }
     }
