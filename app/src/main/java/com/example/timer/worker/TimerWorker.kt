@@ -1,8 +1,11 @@
 package com.example.timer.worker
 
 import android.content.Context
+import android.content.pm.ServiceInfo
+import android.os.Build
 import android.util.Log
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
@@ -23,14 +26,14 @@ class TimerWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
 
     override suspend fun doWork(): Result {
         try {
-            timerValue = inputData.getFloat(KEY_TIMER_INPUT, TIMER_DEFAULT_VALUE)
             currentCommand = inputData.getInt(KEY_TIMER_COMMAND, TimerWorkerCommand.NO_COMMAND.id)
 
-            when(currentCommand) {
+            when (currentCommand) {
                 TimerWorkerCommand.START_TIMER.id -> startTimer()
                 TimerWorkerCommand.PAUSE_TIMER.id -> pauseTimer()
                 TimerWorkerCommand.RESET_TIMER.id -> resetTimer()
             }
+            setForeground(createForegroundInfo(timerValue))
             startTimerWork()
         } catch (e: Exception) {
             Log.e(TAG, "exception in doWork(): ${e.message}")
@@ -40,12 +43,12 @@ class TimerWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
     }
 
     private suspend fun startTimer() {
+        timerValue = inputData.getFloat(KEY_TIMER_INPUT, TIMER_DEFAULT_VALUE)
         updateTimerState(TimerState.RUNNING)
     }
 
     private suspend fun pauseTimer() {
-        updateTimerState(TimerState.IDLE)
-//        workManager.cancelUniqueWork(name)
+        updateTimerState(TimerState.PAUSED)
     }
 
     private suspend fun resetTimer() {
@@ -82,12 +85,21 @@ class TimerWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
         setProgress(
             workDataOf(KEY_TIMER_STATE to timerState.id)
         )
+    }
 
-        when (timerState) {
-            TimerState.RUNNING -> notification.update(timerValue)
-            TimerState.IDLE -> notification.hide()
-            else -> {}
+    private fun createForegroundInfo(timerValue: Float): ForegroundInfo {
+        val foregroundInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            notification.createNotificationChannel()
+            ForegroundInfo(
+                notification.id,
+                notification.buildNotification(timerValue),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            ForegroundInfo(notification.id, notification.buildNotification(timerValue))
         }
+
+        return foregroundInfo
     }
 
     companion object {

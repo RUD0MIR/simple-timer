@@ -39,9 +39,11 @@ class TimerWorkerRepoImpl(
 
     private fun startTimer(initialTimerValue: Float) {
         val workRequest = requestBuilder
-            .setInputData(workDataOf(TimerWorker.KEY_TIMER_INPUT to initialTimerValue) )
             .setInputData(
-                Data.Builder().putInt(TimerWorker.KEY_TIMER_COMMAND, TimerWorkerCommand.START_TIMER.id).build()
+                 workDataOf(
+                     TimerWorker.KEY_TIMER_INPUT to initialTimerValue,
+                     TimerWorker.KEY_TIMER_COMMAND to TimerWorkerCommand.START_TIMER.id
+                 )
             )
             .build()
         workManager.enqueueUniqueWork(TimerWorker.name, ExistingWorkPolicy.KEEP, workRequest)

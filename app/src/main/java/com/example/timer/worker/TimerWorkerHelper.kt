@@ -9,6 +9,7 @@ enum class TimerWorkerCommand(val id: Int) {
 
 enum class TimerState(val id: Int) {
     IDLE(0),
+    PAUSED(2),
     RUNNING(1),
     UNKNOWN(-1)
 }
