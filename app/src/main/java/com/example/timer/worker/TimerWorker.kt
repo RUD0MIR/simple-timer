@@ -1,6 +1,7 @@
 package com.example.timer.worker
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.util.Log
@@ -9,17 +10,20 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.example.timer.AlarmReceiver
+import com.example.timer.R
 import com.example.timer.TIMER_DEFAULT_VALUE
+import com.example.timer.WakeActivity
 import com.example.timer.decomposeTime
 import com.example.timer.timer.TimerNotification
 import kotlinx.coroutines.delay
 import java.util.UUID
 
 
-class TimerWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
+class TimerWorker(private val ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
 
     private var timerValue = TIMER_DEFAULT_VALUE
-    private val notification = TimerNotification(applicationContext)
+    private val notification = TimerNotification(ctx)
     private var currentCommand = TimerWorkerCommand.NO_COMMAND.id
     private val workManager = WorkManager.getInstance(ctx)
     private var timerState = TimerState.IDLE
@@ -60,7 +64,7 @@ class TimerWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
     private suspend fun startTimerWork() {
         while (timerState == TimerState.RUNNING) {
             if (timerValue <= 0f) {
-                updateTimerState(TimerState.IDLE)
+                onTimerFinished()
             }
 
             delay(100L)
@@ -69,6 +73,17 @@ class TimerWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
 
             updateTimerValue()
         }
+    }
+
+    private suspend fun onTimerFinished() {
+        updateTimerState(TimerState.IDLE)
+
+        val alarmIntent = Intent(ctx, AlarmReceiver::class.java).apply {
+            action = ctx.getString(R.string.alarm_triggered_action)
+        }
+        ctx.sendBroadcast(alarmIntent)
+
+        resetTimer()
     }
 
     private suspend fun updateTimerValue() {

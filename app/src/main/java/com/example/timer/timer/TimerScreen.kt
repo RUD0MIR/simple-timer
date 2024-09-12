@@ -37,7 +37,7 @@ fun TimerScreen(
         }
 
         Button(onClick = {
-            onStartTimer(1000f)
+            onStartTimer(5f)
         }) {
             Text(text = "START", fontSize = 32.sp)
         }
