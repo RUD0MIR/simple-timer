@@ -9,9 +9,11 @@ enum class TimerWorkerCommand(val id: Int) {
 
 enum class TimerState(val id: Int) {
     IDLE(0),
-    PAUSED(2),
     RUNNING(1),
+    PAUSED(2),
     UNKNOWN(-1)
 }
 
 fun Int.toTimerState() = TimerState.entries.find { it.id == this } ?: TimerState.UNKNOWN
+
+fun Int.toCommand() = TimerWorkerCommand.entries.find { it.id == this } ?: TimerWorkerCommand.NO_COMMAND

@@ -4,6 +4,6 @@
     <string name="timer_notification_title">Timer remaining:</string>
     <string name="title_activity_wake">WakeActivity</string>
 
-    <string name="alarm_triggered_action">ALARM_TRIGGERED_ACTION</string>
+    <string name="trigger_alarm_action">ALARM_TRIGGERED_ACTION</string>
     <string name="cancel_alarm_action">CANCEL_ALARM_ACTION</string>
 </resources>

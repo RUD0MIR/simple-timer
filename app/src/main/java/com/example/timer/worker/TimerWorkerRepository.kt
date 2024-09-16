@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.flowOf
 
 interface TimerWorkerRepository {
     val workerTimerValue: Flow<Float>
-    val workerTimerState: Flow<TimerState>
     suspend fun startStopTimer(initialTimerValue: Float)
     suspend fun resetTimer()
 }

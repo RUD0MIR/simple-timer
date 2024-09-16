@@ -7,7 +7,11 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.example.timer.TIMER_DEFAULT_VALUE
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.take
+import java.util.Timer
 
 class TimerWorkerRepoImpl(
     ctx: Context,
@@ -20,21 +24,35 @@ class TimerWorkerRepoImpl(
         it.last().progress.getFloat(TimerWorker.KEY_TIMER_OUTPUT, TIMER_DEFAULT_VALUE)
     }
 
-    override var workerTimerState = workInfo.map {
-        it.last().progress.getInt(TimerWorker.KEY_TIMER_STATE, TimerState.UNKNOWN.id)
-            .toTimerState()
-    }
-
-    private var isTimerRunning = false
+    private var timerState = TimerState.IDLE
 
     override suspend fun startStopTimer(initialTimerValue: Float) {
-        if (!isTimerRunning) startTimer(initialTimerValue)
-        else pauseTimer()
+        when(timerState) {
+            TimerState.IDLE -> {
+                timerState = TimerState.RUNNING
+                startTimer(initialTimerValue)
+            }
+            TimerState.RUNNING -> {
+                timerState = TimerState.PAUSED
+                pauseTimer(initialTimerValue)
+            }
+            TimerState.PAUSED -> {
+                timerState = TimerState.RUNNING
+                startTimer(initialTimerValue)
+            }
+            else -> {}
+        }
     }
 
     override suspend fun resetTimer() {
-        sendCommand(TimerWorkerCommand.RESET_TIMER)
-        isTimerRunning = false
+        val workRequest = requestBuilder
+            .setInputData(workDataOf(
+                TimerWorker.KEY_TIMER_STATE to TimerState.IDLE.id
+            ))
+            .build()
+        workManager.enqueueUniqueWork(TimerWorker.name, ExistingWorkPolicy.REPLACE, workRequest)
+
+        timerState = TimerState.IDLE
     }
 
     private fun startTimer(initialTimerValue: Float) {
@@ -42,25 +60,21 @@ class TimerWorkerRepoImpl(
             .setInputData(
                  workDataOf(
                      TimerWorker.KEY_TIMER_INPUT to initialTimerValue,
-                     TimerWorker.KEY_TIMER_COMMAND to TimerWorkerCommand.START_TIMER.id
+                     TimerWorker.KEY_TIMER_STATE to TimerState.RUNNING.id
                  )
             )
             .build()
-        workManager.enqueueUniqueWork(TimerWorker.name, ExistingWorkPolicy.KEEP, workRequest)
-        isTimerRunning = true
-
+        workManager.enqueueUniqueWork(TimerWorker.name, ExistingWorkPolicy.REPLACE, workRequest)
     }
 
-    private fun pauseTimer() {
-        sendCommand(TimerWorkerCommand.PAUSE_TIMER)
-        isTimerRunning = false
-    }
-
-    private fun sendCommand(command: TimerWorkerCommand) {
+    private fun pauseTimer(initialTimerValue: Float) {
         val workRequest = requestBuilder
-            .setInputData(workDataOf(
-                TimerWorker.KEY_TIMER_COMMAND to command.id,
-            ))
+            .setInputData(
+                workDataOf(
+                    TimerWorker.KEY_TIMER_INPUT to initialTimerValue,
+                    TimerWorker.KEY_TIMER_STATE to TimerState.PAUSED.id
+                )
+            )
             .build()
         workManager.enqueueUniqueWork(TimerWorker.name, ExistingWorkPolicy.REPLACE, workRequest)
     }

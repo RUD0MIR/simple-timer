@@ -1,9 +1,10 @@
 package com.example.timer
 
 import android.app.Activity
-import android.content.Intent
-import android.os.Build
+import android.media.Ringtone
+import android.media.RingtoneManager
 import android.os.Bundle
+import android.view.Window
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -12,32 +13,26 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.example.timer.ui.theme.TIMERTheme
 
+
 class WakeActivity : ComponentActivity() {
+
+    private var ringtone: Ringtone? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-            setTurnScreenOn(true)
-            setShowWhenLocked(true)
-        } else {
-            window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
-            window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
-        }
+
+        ringtone = RingtoneManager.getRingtone(this, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))
 
         setContent {
             TIMERTheme {
@@ -55,11 +50,6 @@ class WakeActivity : ComponentActivity() {
                         fontSize = 32.sp
                     )
                     Button(onClick = {
-                        val cancelAlarmIntent = Intent(context, AlarmReceiver::class.java).apply {
-                            action = context.getString(R.string.cancel_alarm_action)
-                        }
-                        context.sendBroadcast(cancelAlarmIntent)
-
                         (context as Activity).finish()
                     }) {
                         Text(text = "Stop alarm")
@@ -68,4 +58,28 @@ class WakeActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        unlockScreen()
+        ringtone?.play()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        stopAlarmSound()
+    }
+
+    private fun stopAlarmSound() {
+        ringtone?.stop()
+        ringtone = null
+    }
+
+    private fun unlockScreen() {
+        val window: Window = window
+        window.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD)
+        window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+        window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+    }
 }
+

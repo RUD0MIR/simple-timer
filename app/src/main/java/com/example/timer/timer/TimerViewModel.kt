@@ -17,7 +17,7 @@ class TimerViewModel(
 
     fun startStopTimer(initialValue: Float) {
         if (_timerValue.value == 0f) {
-            _timerValue.value = initialValue
+            _timerValue.value = initialValue + 0.9f //to avoid permanent decreasing of first second
         }
 
         viewModelScope.launch {

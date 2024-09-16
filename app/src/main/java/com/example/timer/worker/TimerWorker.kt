@@ -10,35 +10,33 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.example.timer.AlarmReceiver
+import com.example.timer.broadcast.AlarmReceiver
 import com.example.timer.R
 import com.example.timer.TIMER_DEFAULT_VALUE
-import com.example.timer.WakeActivity
-import com.example.timer.decomposeTime
 import com.example.timer.timer.TimerNotification
 import kotlinx.coroutines.delay
 import java.util.UUID
 
 
-class TimerWorker(private val ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
+class TimerWorker(private val ctx: Context, params: WorkerParameters) :
+    CoroutineWorker(ctx, params) {
 
     private var timerValue = TIMER_DEFAULT_VALUE
     private val notification = TimerNotification(ctx)
-    private var currentCommand = TimerWorkerCommand.NO_COMMAND.id
     private val workManager = WorkManager.getInstance(ctx)
-    private var timerState = TimerState.IDLE
+    private var timerState = TimerState.UNKNOWN.id
 
     override suspend fun doWork(): Result {
         try {
-            currentCommand = inputData.getInt(KEY_TIMER_COMMAND, TimerWorkerCommand.NO_COMMAND.id)
+            timerState = inputData.getInt(KEY_TIMER_STATE, TimerState.UNKNOWN.id)
+            timerValue = inputData.getFloat(KEY_TIMER_INPUT, TIMER_DEFAULT_VALUE)
 
-            when (currentCommand) {
-                TimerWorkerCommand.START_TIMER.id -> startTimer()
-                TimerWorkerCommand.PAUSE_TIMER.id -> pauseTimer()
-                TimerWorkerCommand.RESET_TIMER.id -> resetTimer()
+            when (timerState) {
+                TimerState.IDLE.id -> cancelWork()
+                TimerState.PAUSED.id -> pauseWork()
             }
             setForeground(createForegroundInfo(timerValue))
-            startTimerWork()
+            doTimerWork()
         } catch (e: Exception) {
             Log.e(TAG, "exception in doWork(): ${e.message}")
             return Result.failure()
@@ -46,25 +44,19 @@ class TimerWorker(private val ctx: Context, params: WorkerParameters) : Coroutin
         return Result.success()
     }
 
-    private suspend fun startTimer() {
-        timerValue = inputData.getFloat(KEY_TIMER_INPUT, TIMER_DEFAULT_VALUE)
-        updateTimerState(TimerState.RUNNING)
-    }
-
-    private suspend fun pauseTimer() {
-        updateTimerState(TimerState.PAUSED)
-    }
-
-    private suspend fun resetTimer() {
-        updateTimerState(TimerState.IDLE)
+    private fun cancelWork() {
         timerValue = 0f
         workManager.cancelUniqueWork(name)
     }
 
-    private suspend fun startTimerWork() {
-        while (timerState == TimerState.RUNNING) {
+    private fun pauseWork() {
+        workManager.cancelUniqueWork(name)
+    }
+
+    private suspend fun doTimerWork() {
+        while (timerState == TimerState.RUNNING.id) {
             if (timerValue <= 0f) {
-                onTimerFinished()
+                onWorkFinished()
             }
 
             delay(100L)
@@ -75,31 +67,22 @@ class TimerWorker(private val ctx: Context, params: WorkerParameters) : Coroutin
         }
     }
 
-    private suspend fun onTimerFinished() {
-        updateTimerState(TimerState.IDLE)
-
+    private fun onWorkFinished() {
         val alarmIntent = Intent(ctx, AlarmReceiver::class.java).apply {
-            action = ctx.getString(R.string.alarm_triggered_action)
+            action = ctx.getString(R.string.trigger_alarm_action)
         }
         ctx.sendBroadcast(alarmIntent)
 
-        resetTimer()
+        cancelWork()
     }
 
     private suspend fun updateTimerValue() {
         setProgress(
             workDataOf(KEY_TIMER_OUTPUT to timerValue)
         )
-        if (timerState == TimerState.RUNNING) {
-            notification.update(timerValue)
-        }
-    }
-
-    private suspend fun updateTimerState(state: TimerState) {
-        timerState = state
-        setProgress(
-            workDataOf(KEY_TIMER_STATE to timerState.id)
-        )
+//        if (timerState == TimerState.RUNNING.id) {
+//            notification.update(timerValue)
+//        }
     }
 
     private fun createForegroundInfo(timerValue: Float): ForegroundInfo {

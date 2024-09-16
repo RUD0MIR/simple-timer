@@ -37,10 +37,10 @@
             </intent-filter>
         </activity>
 
-        <receiver android:name=".AlarmReceiver"
+        <receiver android:name=".broadcast.AlarmReceiver"
             android:exported="false">
             <intent-filter>
-                <action android:name="@string/alarm_triggered_action"/>
+                <action android:name="@string/trigger_alarm_action"/>
                 <action android:name="@string/cancel_alarm_action"/>
             </intent-filter>
         </receiver>
